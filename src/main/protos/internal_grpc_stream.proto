@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package services.grpc_stream;
+
+option java_package = "com.poc.proto";
+option java_multiple_files = true;
+
+service GrpcStreamService {
+
+  rpc Exchange(stream ExchangeRequest) returns (stream ExchangeResponse);
+
+}
+
+message ExchangeRequest {
+  // device-to-cloud message, a stringified JSON.
+  string data = 1;
+  MessageType message_type = 2;
+}
+
+message ExchangeResponse {
+  // cloud to device message, a stringified JSON.
+  string data = 1;
+  string tag = 2;
+  MessageType message_type = 3;
+}
+
+enum MessageType {
+  DEVICE_ACTION = 0;
+  DEVICE_ACTION_RESPONSE = 1;
+  DEVICE_DATA = 2;
+}

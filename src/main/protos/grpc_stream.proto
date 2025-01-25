@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package services.grpc_stream;
+
+option java_package = "com.poc.proto";
+option java_multiple_files = true;
+
+import "google/protobuf/empty.proto";
+
+service InternalGrpcStreamService {
+
+  rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty);
+  rpc DisconnectDevice(DisconnectDeviceRequest) returns (google.protobuf.Empty);
+
+}
+
+message DisconnectDeviceRequest {
+  string device_identifier = 1;
+}
+
+message SendMessageRequest {
+  string device_identifier = 1;
+  string tag = 2;
+  string message_payload = 3;
+}

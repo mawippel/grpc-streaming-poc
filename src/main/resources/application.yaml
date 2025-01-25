@@ -1,0 +1,104 @@
+spring:
+  application:
+    name: grpc-streaming-poc
+  profiles:
+    active: ${SPRING_PROFILE:default}
+  # required for secret manager to resolve ${sm://} placeholders
+  #  https://googlecloudplatform.github.io/spring-cloud-gcp/4.1.0/reference/html/index.html#secret-manager-property-source
+  config:
+    import: sm://
+  data:
+    mongodb:
+      database: ${MONGO_DB_NAME:phoenix}
+      uri: ${MONGODB_URI:mongodb://localhost:27017/admin}
+      schema-version: ${MONGODB_SCHEMA_VERSION:1}
+  jmx:
+    enabled: ${JMX_ENABLED:true}
+  kafka:
+    properties:
+      sasl:
+        jaas:
+          config: org.apache.kafka.common.security.plain.PlainLoginModule required
+            username='${KAFKA_CLUSTER_API_KEY}' password='${KAFKA_CLUSTER_API_SECRET}';
+        mechanism: PLAIN
+      # Best practice for higher availability in Apache Kafka clients prior to 3.0
+      session:
+        timeout:
+          ms: '45000'
+      security:
+        protocol: SASL_SSL
+      bootstrap:
+        servers: ${KAFKA_BOOTSTRAP_ENDPOINT}
+      max:
+        message:
+          size: 2097152
+      basic:
+        auth:
+          user:
+            info: '${KAFKA_SCHEMA_REGISTRY_CLUSTER_API_KEY}:${KAFKA_SCHEMA_REGISTRY_CLUSTER_API_SECRET}'
+          credentials:
+            source: USER_INFO
+      schema:
+        registry:
+          url: ${KAFKA_SCHEMA_REGISTRY_REST_ENDPOINT}
+      latest:
+        compatibility:
+          level: none
+          strict:
+            level: none
+      id:
+        compatibility:
+          strict: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializer
+      client-id: grpc-stream-service
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer
+      group-id: grpc-stream-service
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_ENDPOINT}
+
+grpc:
+  server:
+    port: ${GRPC_SERVER_PORT:9090}
+    # port used to call this service from inside the cluster without mTLS
+    internal-port: ${GRPC_SERVER_INTERNAL_PORT:9091}
+    # Most aggressive keep-alive time is 1 minute
+    permit-keep-alive-time: ${GRPC_SERVER_PERMIT_KEEP_ALIVE_TIME:60}
+    keep-alive-time: ${GRPC_SERVER_KEEP_ALIVE_TIME:1800} # 30 minutes
+    keep-alive-timeout: ${GRPC_SERVER_KEEP_ALIVE_TIMEOUT:10}
+    # mTLS
+    certificate-chain: ${sm://grpc_stream_cert_chain}
+    private-key: ${sm://grpc_stream_private_key}
+    trust-manager: ${sm://grpc_stream_trust_manager}
+    certificate-authority:
+      bucket-name: ${CA_BUCKET_NAME:bucket-name}
+      file-name: ${CA_FILE_NAME:ca.p12}
+      password: ${sm://grpc_stream_trust_manager_password}
+
+api:
+  to:
+    endpoint:
+      # topic used by DMS to publish cert updates
+      topic: ${ENDPOINT_DOWNLINK_TOPIC:uat-endpoint-downlink}
+      # one subscription per pod for the cert updates
+      subscription: grpcStreamCertUpdatesTopic-sub-${POD_NAME}
+
+gcp:
+  project-id: ${GCP_PROJECT:test}
+
+k8s:
+  metadata:
+    namespace: ${K8S_METADATA_NAMESPACE:namespace}
+    ip: ${K8S_METADATA_IP:pod-ip-here}
+    name: ${POD_NAME:pod-name-here}
+
+kafka:
+  topics:
+    upstream:
+      name: ${KAFKA_TOPIC_UPSTREAM_NAME:upstream-events}
+    downstream:
+      name: ${KAFKA_TOPIC_DOWNSTREAM_NAME:downstream-events}

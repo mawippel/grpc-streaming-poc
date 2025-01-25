@@ -1,0 +1,110 @@
+// all versions are managed in gradle-build-conventions/versions-definitions/build.gradle
+// see gradle-build-conventions/README.md for more details
+plugins {
+    id 'application'
+    id 'java'
+    id 'com.google.protobuf' version '0.9.3'
+    id 'org.springframework.boot' version '3.1.0'
+    id 'io.spring.dependency-management' version '1.1.0'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://packages.confluent.io/maven"
+    }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:3.1.0'
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+sourceSets {
+    main {
+        proto {
+            srcDir 'src/main/protos'
+        }
+    }
+}
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'com.google.cloud:spring-cloud-gcp-starter-secretmanager:4.5.1'
+    implementation 'io.lettuce:lettuce-core:6.2.4.RELEASE'
+
+    implementation 'org.mongodb:mongodb-driver-sync:4.9.1'
+    implementation("com.google.guava:guava:32.0.0-jre")
+    implementation 'org.apache.commons:commons-collections4:4.4'
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+    compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
+
+    // Java Jackson
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
+
+    // GRPC
+    implementation 'io.grpc:grpc-all:1.56.1'
+    implementation 'io.grpc:grpc-protobuf:1.56.1'
+    implementation 'io.grpc:grpc-stub:1.56.1'
+
+    runtimeOnly 'io.grpc:grpc-netty-shaded:1.56.1'
+    runtimeOnly 'com.google.protobuf:protobuf-java-util:3.23.3'
+
+    // Kafka
+    implementation 'org.springframework.kafka:spring-kafka:3.0.0'
+    implementation 'io.confluent:kafka-protobuf-serializer:7.3.0'
+    testImplementation 'org.springframework.kafka:spring-kafka-test:3.0.0'
+
+    // gRPC
+    implementation 'io.grpc:grpc-services:1.56.1'
+
+    // Cloud Storage
+    implementation 'com.google.cloud:spring-cloud-gcp-starter-storage:4.5.1'
+
+    // Logging
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.2'
+
+    // Datadog
+    implementation 'com.datadoghq:dd-javac-plugin-client:0.1.0'
+    annotationProcessor 'com.datadoghq:dd-javac-plugin:0.1.0'
+    testAnnotationProcessor 'com.datadoghq:dd-javac-plugin:0.1.0'
+}
+
+
+protobuf {
+    protoc {
+        //This is the latest version I found to compile OK. We'll need to figure out why it's blowing up later if we upgrade further.
+        // for Apple M1, add protoc_platform=osx-x86_64 in $HOME/.gradle/gradle.properties
+        artifact = 'com.google.protobuf:protoc:3.25.4'
+        if (project.hasProperty('protoc_platform')) {
+            artifact += ":${protoc_platform}"
+        }
+    }
+    plugins {
+        grpc {
+            // for Apple M1, add protoc_platform=osx-x86_64 in $HOME/.gradle/gradle.properties
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.62.2'
+            if (project.hasProperty('protoc_platform')) {
+                artifact += ":${protoc_platform}"
+            }
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
